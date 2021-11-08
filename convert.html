@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<body>
+<label for="trans">txt를 번역용 json으로 변환:</label>
+<input type="file" id="trans" name="trans" accept=".txt" multiple><br>
+<label for="trans">번역용 json을 txt로 변환:</label>
+<input type="file" id="trans2" name="trans2" accept=".json">
+</body>
+<script>
+    let obj = {};
+    "use strict";
+    let doLoaded = false
+    let output = ''
+    const inputElement = document.getElementById("trans");
+    inputElement.addEventListener("change", handleFiles, false);
+    document.getElementById("trans2").addEventListener("change", handleFiles2, false);
+
+    function makeTextFile(text) {
+        let textFile = null
+        let data = new Blob([text], {
+            type: 'text/plain'
+        });
+
+        if (textFile !== null) {
+            window.URL.revokeObjectURL(textFile);
+        }
+
+        textFile = window.URL.createObjectURL(data);
+
+        return textFile;
+    };
+
+    async function handleFiles2() {
+        let outFile = {}
+        const files = this.files; /* 이제 파일 리스트로 작업할 수 있습니다 */
+        const numFiles = files.length;
+        for (let i = 0, numFiles = files.length; i < numFiles; i++) {
+            doLoaded = false
+            const reader = new FileReader();
+            const file = files[i];
+            const fileName = (file.name)
+            reader.onload = function (progressEvent) {
+                doLoaded = true
+                output = (progressEvent.target.result);
+            };
+            reader.readAsText(file)
+            await WaitLoad()
+            const dat = JSON.parse(output)
+            const keys = Object.keys(dat)
+            for(let i=0;i<keys.length;i++){
+                const f = keys[i].split('||')
+                const fileName = f[0]
+                const fileIndex = parseInt(f[1])
+                const fileData = dat[keys[i]]
+                if(!outFile[fileName]){
+                    outFile[fileName] = []
+                }
+                while(outFile[fileName].length < fileIndex){
+                    outFile[fileName].push('')
+                }
+                outFile[fileName][fileIndex] = fileData
+            }
+            const FileKeys = Object.keys(outFile)
+            for(let i=0;i<FileKeys.length;i++){
+                const obj = outFile[FileKeys[i]].join('\n')
+                let link = document.createElement('a');
+                link.setAttribute('download', FileKeys[i]);
+                link.href = makeTextFile(obj);
+                document.body.appendChild(link);
+                link.click()
+                link.remove()
+            }
+        }
+    }
+
+    async function handleFiles() {
+        const files = this.files; /* 이제 파일 리스트로 작업할 수 있습니다 */
+        const numFiles = files.length;
+        for (let i = 0, numFiles = files.length; i < numFiles; i++) {
+            doLoaded = false
+            const reader = new FileReader();
+            const file = files[i];
+            const fileName = (file.name)
+            reader.onload = function (progressEvent) {
+                doLoaded = true
+                output = (progressEvent.target.result);
+            };
+            reader.readAsText(file)
+            await WaitLoad()
+            const Nlist = (output.split('\n'))
+            for (let x = 0; x < Nlist.length; x++) {
+                let astring = Nlist[x].replace('\r','')
+                obj[fileName + '||' + (x).toString()] = astring
+            }
+        }
+        let link = document.createElement('a');
+        link.setAttribute('download', 'trans.json');
+        link.href = makeTextFile((JSON.stringify(obj, null, 4)));
+        document.body.appendChild(link);
+        link.click()
+        link.remove()
+    }
+
+    function WaitLoad() {
+        return new Promise(function (resolve, reject) {
+            (function waitForFoo() {
+                if (doLoaded) return resolve();
+                setTimeout(waitForFoo, 30);
+            })();
+        });
+    }
+</script>
